@@ -7,6 +7,9 @@ import pyspark.sql.functions as psf
 
 # TODO Create a schema for incoming resources
 schema = StructType([
+    StructField(),
+    StructField(),
+    StructField()
 ])
 
 def run_spark_job(spark):
@@ -16,6 +19,12 @@ def run_spark_job(spark):
     # set up correct bootstrap server and port
     df = spark \
         .readStream \
+        .format("kafka") \
+        .option("kafka.bootstrap.servers","localhost:9092") \
+        .option("subscribe","call_details") \
+        .option("startingOffsets","earliest") \
+        .option("maxOffsetsPerTrigger","200") \
+        .load()
 
     # Show schema for the incoming resources for checks
     df.printSchema()
@@ -37,13 +46,14 @@ def run_spark_job(spark):
     # TODO Q1. Submit a screen shot of a batch ingestion of the aggregation
     # TODO write output stream
     query = agg_df \
+    #query.writeStream.outputMode("append").format("console").start().awaitTermination()
 
 
     # TODO attach a ProgressReporter
     query.awaitTermination()
 
     # TODO get the right radio code json path
-    radio_code_json_filepath = ""
+    radio_code_json_filepath = "radio_code.json"
     radio_code_df = spark.read.json(radio_code_json_filepath)
 
     # clean up your data so that the column names match on radio_code_df and agg_df
@@ -53,7 +63,7 @@ def run_spark_job(spark):
     radio_code_df = radio_code_df.withColumnRenamed("disposition_code", "disposition")
 
     # TODO join on disposition column
-    join_query = agg_df.
+    join_query = agg_df.join(radio_code_df,"disposition")
 
 
     join_query.awaitTermination()
