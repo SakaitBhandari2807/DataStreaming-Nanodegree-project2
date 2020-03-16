@@ -7,9 +7,20 @@ import pyspark.sql.functions as psf
 
 # TODO Create a schema for incoming resources
 schema = StructType([
-    StructField(),
-    StructField(),
-    StructField()
+    StructField("crime_id",IntegerType(),False),
+    StructField("original_crime_type_name",StringType(),False),
+    StructField("report_date",StringType(),False),
+    StructField("call_date",StringType(),False),
+    StructField("offense_date",StringType(),False),
+    StructField("call_time",StringType(),False),
+    StructField("call_date_time",StringType(),False),
+    StructField("disposition",StringType(),False),
+    StructField("address",StringType(),False),
+    StructField("city",StringType(),False),
+    StructField("state",StringType(),False),
+    StructField("agency_id",IntegerType(),False),
+    StructField("address_type",StringType(),False),
+    StructField("common_location",StringType(),False)
 ])
 
 def run_spark_job(spark):
@@ -31,22 +42,22 @@ def run_spark_job(spark):
 
     # TODO extract the correct column from the kafka input resources
     # Take only value and convert it to String
-    kafka_df = df.selectExpr("")
+    kafka_df = df.selectExpr("cast(value as string)")
 
     service_table = kafka_df\
         .select(psf.from_json(psf.col('value'), schema).alias("DF"))\
         .select("DF.*")
-
+        
     # TODO select original_crime_type_name and disposition
-    distinct_table = 
+    distinct_table = service_table.select("original_crime_type_name","disposition").distinct()
 
     # count the number of original crime type
-    agg_df = 
+    agg_df = distinct_table.groupBy("original_crime_type_name").count()
 
     # TODO Q1. Submit a screen shot of a batch ingestion of the aggregation
     # TODO write output stream
     query = agg_df \
-    #query.writeStream.outputMode("append").format("console").start().awaitTermination()
+            .writeStream.outputMode("append").format("memory").start()
 
 
     # TODO attach a ProgressReporter
