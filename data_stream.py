@@ -47,17 +47,21 @@ def run_spark_job(spark):
     service_table = kafka_df\
         .select(psf.from_json(psf.col('value'), schema).alias("DF"))\
         .select("DF.*")
-        
+
     # TODO select original_crime_type_name and disposition
     distinct_table = service_table.select("original_crime_type_name","disposition").distinct()
 
     # count the number of original crime type
-    agg_df = distinct_table.groupBy("original_crime_type_name").count()
+    agg_df = distinct_table.dropna().select("original_crime_type_name").groupBy("original_crime_type_name").agg({"original_crime_type_name":"count"}).orderBy("count(original_crime_type_name)",ascending=False)
 
     # TODO Q1. Submit a screen shot of a batch ingestion of the aggregation
     # TODO write output stream
     query = agg_df \
-            .writeStream.outputMode("append").format("memory").start()
+            .writeStream \
+            .outputMode("complete") \
+            .format("console") \
+            .trigger(processingTime="20 seconds") \
+            .start()
 
 
     # TODO attach a ProgressReporter
@@ -84,8 +88,13 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
 
     # TODO Create Spark in Standalone mode
+   # TODO Create Spark in Standalone mode
     spark = SparkSession \
         .builder \
+        .config("spark.ui.port", 3000) \
+        .config("spark.sql.shuffle.partitions", 9) \
+        .config("spark.streaming.kafka.maxRatePerPartition", 1000) \
+        .config("spark.default.parallelism", 300) \
         .master("local[*]") \
         .appName("KafkaSparkStructuredStreaming") \
         .getOrCreate()
